@@ -1,0 +1,30 @@
+Stavio sam da korisnici koji nisu ADMIN(username: tom) mogu da pristupaju
+do localhost:8080/persons/njihov_id ali ne i ostalim stranicama za druge
+korisnike, jer sam smatrao da je to njihova stranica, pa sto ne bi mogli
+da pristupaju. Ako bas niko sem admina ne sme da pristupa do .../persons/id
+to ce se postici tako sto ce se metoda sa potpisom:
+
+@GetMapping("/persons/{id}")
+@PreAuthorize("hasAuthority('VIEW_PERSON') or hasAuthority('VIEW_SELF_PERSONS_PAGE')")
+public String person(@PathVariable int id, Model model, HttpSession session)
+
+zameniti sa metodom:
+
+    @GetMapping("/persons/{id}")
+    @PreAuthorize("hasAuthority('VIEW_PERSON')")
+    public String person(@PathVariable int id, Model model, HttpSession session) {
+        // @PreAuthorize("hasAuthority('VIEW_PERSON') or hasAuthority('VIEW_SELF_PERSONS_PAGE')")
+        // Korisnik sa Id = 1 sme da vidi persons/1, ali ne i persons/2, persons/3...\
+        // Dodao sam linije koda 52-54 i or deo u PreAuthorize na 48
+        /*if(SecurityUtil.hasPermission("VIEW_SELF_PERSONS_PAGE") && id != SecurityUtil.getCurrentUser().getId()){
+            throw new AccessDeniedException("Mozes da vidis samo svoju persons/Id stranicu!");
+        }*/
+        User user = SecurityUtil.getCurrentUser();
+        String csrf = session.getAttribute("CSRF_TOKEN").toString();
+        model.addAttribute("CSRF_TOKEN", session.getAttribute("CSRF_TOKEN"));
+        model.addAttribute("person", personRepository.get("" + id));
+        return "person";
+    }
+
+Dakle samo zamena PreAuthorize headera, sa zakomentarisanim if-ov koji provera da li se pristupa samo vlastitoj takvoj
+stranici. :)
